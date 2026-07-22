@@ -1,42 +1,12 @@
-// Mini ERP + CRM — Prisma schema (configured for PostgreSQL / Supabase)
+// Mini ERP + CRM — Prisma schema
 
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
   url      = env("DATABASE_URL")
-}
-
-enum Role {
-  ADMIN
-  SALES
-  WAREHOUSE
-  ACCOUNTS
-}
-
-enum CustomerType {
-  RETAIL
-  WHOLESALE
-  DISTRIBUTOR
-}
-
-enum CustomerStatus {
-  LEAD
-  ACTIVE
-  INACTIVE
-}
-
-enum MovementType {
-  IN
-  OUT
-}
-
-enum ChallanStatus {
-  DRAFT
-  CONFIRMED
-  CANCELLED
 }
 
 model User {
@@ -44,7 +14,7 @@ model User {
   name         String
   email        String   @unique
   passwordHash String
-  role         Role
+  role         String
   createdAt    DateTime @default(now())
 
   customersCreated  Customer[]      @relation("CustomerCreatedBy")
@@ -56,15 +26,15 @@ model User {
 }
 
 model Customer {
-  id           String         @id @default(cuid())
+  id           String   @id @default(cuid())
   name         String
   mobile       String
   email        String?
   businessName String?
   gstNumber    String?
-  customerType CustomerType
+  customerType String
   address      String?
-  status       CustomerStatus @default(LEAD)
+  status       String   @default("LEAD")
   followUpDate DateTime?
   notes        String?
 
@@ -99,7 +69,7 @@ model Product {
   name             String
   sku              String   @unique
   category         String?
-  unitPrice        Decimal  @db.Decimal(12, 2)
+  unitPrice        Decimal
   currentStock     Int      @default(0)
   minStockAlertQty Int      @default(0)
   location         String?
@@ -116,15 +86,15 @@ model Product {
 }
 
 model StockMovement {
-  id           String       @id @default(cuid())
+  id           String   @id @default(cuid())
   productId    String
-  product      Product      @relation(fields: [productId], references: [id])
+  product      Product  @relation(fields: [productId], references: [id])
   quantity     Int
-  movementType MovementType
+  movementType String
   reason       String
   createdById  String
-  createdBy    User         @relation(fields: [createdById], references: [id])
-  createdAt    DateTime     @default(now())
+  createdBy    User     @relation(fields: [createdById], references: [id])
+  createdAt    DateTime @default(now())
 
   @@index([productId])
   @@map("stock_movements")
@@ -137,7 +107,7 @@ model Challan {
   customer      Customer      @relation(fields: [customerId], references: [id])
   items         ChallanItem[]
   totalQuantity Int           @default(0)
-  status        ChallanStatus @default(DRAFT)
+  status        String        @default("DRAFT")
   createdById   String
   createdBy     User          @relation(fields: [createdById], references: [id])
   createdAt     DateTime      @default(now())
@@ -147,8 +117,6 @@ model Challan {
   @@map("challans")
 }
 
-// Stores a SNAPSHOT of product name/sku/price at time of adding to challan,
-// so later edits to the product catalog don't change historical challans.
 model ChallanItem {
   id          String   @id @default(cuid())
   challanId   String
@@ -157,7 +125,7 @@ model ChallanItem {
   product     Product  @relation(fields: [productId], references: [id])
   productName String
   productSku  String
-  unitPrice   Decimal  @db.Decimal(12, 2)
+  unitPrice   Decimal
   quantity    Int
 
   @@map("challan_items")
